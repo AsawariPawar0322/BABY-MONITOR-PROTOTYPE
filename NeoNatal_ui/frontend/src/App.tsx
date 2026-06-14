@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { AlertCircle, Shield, Camera, Bell, Monitor, Activity, Heart, Wind, Zap, Mic, RefreshCcw, ArrowLeft, Sliders, LayoutGrid, AlertTriangle, Volume2, VolumeX, Key, Delete, Play, Flame, HelpCircle } from 'lucide-react';
+import { AlertCircle, Shield, Camera, Bell, Activity, Heart, Wind, Zap, Mic, RefreshCcw, ArrowLeft, Sliders, LayoutGrid, AlertTriangle, Volume2, VolumeX, Key, Delete, Flame, HelpCircle } from 'lucide-react';
 import { CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, XAxis, YAxis } from 'recharts';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
@@ -88,7 +88,6 @@ function App() {
     let alarm: any;
     
     // Check if active baby has a crisis, OR if ANY simulated/inactive baby is in UNSAFE status
-    const activeBabyObj = data?.babies?.find((b: any) => b.id === data?.activeBabyId) || {};
     const isLocalCrisis = isCameraEnabled && (data?.motionMonitoring?.status === 'UNSAFE' || (data?.motionMonitoring?.stillTime >= (data?.settings?.apneaAlertTime || 20)));
     const isSimulatedCrisis = data?.babies?.some((b: any) => b.status === 'UNSAFE');
     const isCrisis = isLocalCrisis || isSimulatedCrisis;
@@ -964,7 +963,7 @@ function AuthFlow({ onLogin }: any) {
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="premium-card glass-panel" style={{ width: '450px', padding: '50px 40px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.6)' }}>
         <div style={{ fontSize: '50px', marginBottom: '20px', filter: 'drop-shadow(0 10px 15px rgba(93,183,255,0.25))' }}>👶</div>
-        <h2 style={{ fontSize: '28px', fontWeight: 900, marginBottom: '4px', tracking: '-0.5px' }}>NEO-CARE</h2>
+        <h2 style={{ fontSize: '28px', fontWeight: 900, marginBottom: '4px', letterSpacing: '-0.5px' }}>NEO-CARE</h2>
         <p style={{ color: 'var(--text-muted)', marginBottom: '30px', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
           Clinical Telemetry Terminal
         </p>
