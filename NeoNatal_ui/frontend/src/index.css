@@ -257,17 +257,40 @@ input:checked+.slider:before {
   }
 }
 
+/* Split Dashboard Layout */
+.split-dashboard {
+  display: flex;
+  gap: 30px;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.left-ward-panel {
+  flex: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.right-details-panel {
+  flex: 1.1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: sticky;
+  top: 40px;
+}
+
 /* Google Meet Style Ward Overview Grid */
 .meet-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 24px;
-  flex: 1;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
 }
 
-@media (min-width: 1200px) {
+@media (max-width: 1200px) {
   .meet-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 1fr;
   }
 }
 
@@ -276,7 +299,7 @@ input:checked+.slider:before {
   background: #1E293B; /* Dark modern tile like Google Meet */
   border: 2px solid transparent;
   border-radius: 24px;
-  height: 240px;
+  height: 220px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -289,47 +312,45 @@ input:checked+.slider:before {
 
 .meet-tile:hover {
   transform: scale(1.02);
-  border-color: var(--primary);
-  box-shadow: 0 15px 35px rgba(93, 183, 255, 0.2);
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.2);
 }
 
 /* Selected active baby tile */
-.meet-tile.active-focus {
+.meet-tile.selected-card {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(93, 183, 255, 0.4);
+  box-shadow: 0 0 15px rgba(93, 183, 255, 0.4);
 }
 
-/* Emergency critical pulse */
-.meet-tile.critical-pulse {
-  border-color: var(--secondary);
-  animation: tileCriticalPulse 1s infinite alternate;
+/* Risk alert highlighted tile (Red border and glow takes priority) */
+.meet-tile.risk-alert {
+  border-color: #EF4444 !important;
+  background-color: #31161C !important;
+  animation: tileRedPulse 1.2s infinite alternate;
 }
 
-@keyframes tileCriticalPulse {
+@keyframes tileRedPulse {
   from {
-    box-shadow: 0 0 10px rgba(255, 133, 161, 0.2);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
   }
   to {
-    box-shadow: 0 0 25px rgba(255, 133, 161, 0.8);
-    background-color: #31161C;
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.8);
   }
 }
 
-/* Warning pulse */
-.meet-tile.warning-pulse {
-  border-color: var(--accent);
-  animation: tileWarningPulse 1.2s infinite alternate;
+/* Selection dot badge for priority cards */
+.selection-dot {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 8px var(--primary);
+  border: 2px solid #1E293B;
+  z-index: 10;
 }
 
-@keyframes tileWarningPulse {
-  from {
-    box-shadow: 0 0 8px rgba(255, 210, 63, 0.2);
-  }
-  to {
-    box-shadow: 0 0 20px rgba(255, 210, 63, 0.6);
-    background-color: #2D2412;
-  }
-}
 
 .meet-avatar-container {
   display: flex;

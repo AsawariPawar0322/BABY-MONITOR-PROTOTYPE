@@ -22,6 +22,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<'overview' | 'monitor' | 'settings'>('overview');
   const [isMasterMuted, setIsMasterMuted] = useState<boolean>(false);
   const [isSimPanelExpanded, setIsSimPanelExpanded] = useState<boolean>(true);
+  const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
   
   // Settings Form values
   const [settingsForm, setSettingsForm] = useState({
@@ -129,7 +130,6 @@ function App() {
         if (dashboardRes.ok) {
           setData(await dashboardRes.json());
         }
-        setActiveTab('monitor');
       }
     } catch (e) {
       console.error("Error selecting baby:", e);
@@ -248,12 +248,26 @@ function App() {
 
           <div style={{ marginTop: '20px', padding: '15px', background: 'rgba(255,255,255,0.4)', borderRadius: '16px', border: '1px solid var(--surface-border)', marginBottom: '20px' }}>
             <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)' }}>SELECTED PATIENT</div>
-            <div style={{ fontWeight: 900, color: 'var(--text-main)', fontSize: '14px', marginTop: '4px' }}>{activeBabyObj.name || "Aarav Sharma"}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>ID: {data.activeBabyId}</div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px', fontSize: '11px', fontWeight: 800, color: activeBabyObj.simulationMode !== 'off' ? 'var(--accent)' : 'var(--mint)' }}>
-              <div style={{ width: '6px', height: '6px', background: activeBabyObj.simulationMode !== 'off' ? 'var(--accent)' : 'var(--mint)', borderRadius: '50%' }} />
-              {activeBabyObj.simulationMode !== 'off' ? `Simulation Overridden (${activeBabyObj.simulationMode})` : "Vision Feed Active"}
-            </div>
+            {selectedBabyId ? (
+              (() => {
+                const selBabyObj = babiesList.find((b: any) => b.id === selectedBabyId) || {};
+                return (
+                  <>
+                    <div style={{ fontWeight: 900, color: 'var(--text-main)', fontSize: '14px', marginTop: '4px' }}>Baby ID: {selBabyObj.id}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>{selBabyObj.age} • {selBabyObj.weight}</div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px', fontSize: '11px', fontWeight: 800, color: selBabyObj.simulationMode !== 'off' ? 'var(--accent)' : 'var(--mint)' }}>
+                      <div style={{ width: '6px', height: '6px', background: selBabyObj.simulationMode !== 'off' ? 'var(--accent)' : 'var(--mint)', borderRadius: '50%' }} />
+                      {selBabyObj.simulationMode !== 'off' ? `Simulation (${selBabyObj.simulationMode})` : "Vision Feed Active"}
+                    </div>
+                  </>
+                );
+              })()
+            ) : (
+              <>
+                <div style={{ fontWeight: 900, color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>None Selected</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>Click grid tile to focus</div>
+              </>
+            )}
           </div>
 
           <button onClick={() => window.location.reload()} className="vibrant-btn" style={{ width: '100%', height: '54px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
@@ -264,103 +278,290 @@ function App() {
         {/* Main Workspace */}
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '40px' }}>
           
-          {/* VIEW: WARD OVERVIEW (GOOGLE MEET GRID STYLE) */}
+          {/* VIEW: WARD OVERVIEW (GOOGLE MEET GRID STYLE WITH SPLIT DASHBOARD) */}
           {activeTab === 'overview' && (
-            <>
-              <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h2 style={{ fontSize: '32px', fontWeight: 900 }}>Ward Overview Dashboard</h2>
-                  <p style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Active Neonatal ICU Incubators (Central Hub overview)</p>
-                </div>
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                  <button 
-                    onClick={() => setIsMasterMuted(!isMasterMuted)} 
-                    style={{ padding: '12px 20px', background: 'white', border: '1px solid var(--surface-border)', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}
-                  >
-                    {isMasterMuted ? <VolumeX size={18} color="var(--secondary)" /> : <Volume2 size={18} color="var(--mint)" />}
-                    {isMasterMuted ? "WARD MUTED" : "ALARM VOL: 100%"}
-                  </button>
-                  {anyWardCritical && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 24px', background: 'var(--secondary)', color: 'white', borderRadius: '20px', fontWeight: 900, animation: 'pulse-soft 1s infinite' }}>
-                      <AlertTriangle size={20} /> WARD ALARM ACTIVE
-                    </div>
-                  )}
-                </div>
-              </header>
-
-              <div className="meet-grid">
-                {babiesList.map((baby: any) => {
-                  const isCurrentActive = baby.id === data.activeBabyId;
-                  const isBabyCritical = baby.status === 'UNSAFE';
-                  const isBabyWarning = baby.status === 'WARNING' || baby.status === 'STILL';
-                  
-                  return (
-                    <div 
-                      key={baby.id} 
-                      className={`meet-tile ${isCurrentActive ? 'active-focus' : ''} ${isBabyCritical ? 'critical-pulse' : (isBabyWarning ? 'warning-pulse' : '')}`}
-                      onClick={() => handleSelectBaby(baby.id)}
+            <div className="split-dashboard">
+              <div className="left-ward-panel">
+                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h2 style={{ fontSize: '32px', fontWeight: 900 }}>Ward Overview</h2>
+                    <p style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Active Neonatal ICU Incubators</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                    <button 
+                      onClick={() => setIsMasterMuted(!isMasterMuted)} 
+                      style={{ padding: '12px 20px', background: 'white', border: '1px solid var(--surface-border)', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}
                     >
-                      {/* Vitals Overlay (top right) */}
-                      {baby.status !== 'OFFLINE' && (
-                        <div className="meet-vitals-overlay">
-                          <div className="meet-vital-item" title="Heart Rate">
-                            <Heart size={12} fill="var(--secondary)" color="var(--secondary)" className={baby.vitals?.heartRate > 0 ? "heartbeat-icon" : ""} style={{ animationDuration: `${60 / (baby.vitals?.heartRate || 140)}s` }} /> 
-                            {baby.vitals?.heartRate}
-                          </div>
-                          <div className="meet-vital-item" title="Breathing Rate">
-                            <Wind size={12} color="var(--primary)" /> 
-                            {baby.vitals?.respRate}
-                          </div>
-                          <div className="meet-vital-item" title="SpO2">
-                            <Zap size={12} color="var(--accent)" /> 
-                            {baby.vitals?.spo2}%
-                          </div>
-                        </div>
-                      )}
+                      {isMasterMuted ? <VolumeX size={18} color="var(--secondary)" /> : <Volume2 size={18} color="var(--mint)" />}
+                      {isMasterMuted ? "WARD MUTED" : "ALARM VOL: 100%"}
+                    </button>
+                    {anyWardCritical && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 24px', background: 'var(--secondary)', color: 'white', borderRadius: '20px', fontWeight: 900, animation: 'pulse-soft 1s infinite' }}>
+                        <AlertTriangle size={20} /> WARD ALARM ACTIVE
+                      </div>
+                    )}
+                  </div>
+                </header>
 
-                      {/* Participant Tile Center (Camera feed or Initials Avatar) */}
-                      <div className="meet-avatar-container">
-                        {baby.isLiveSource && isCameraEnabled && isCurrentActive && baby.simulationMode === 'off' ? (
-                          <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0, borderRadius: '22px', overflow: 'hidden' }}>
-                            <CameraPreview isAlert={isCritical} isEnabled={isCameraEnabled} />
-                            <div style={{ position: 'absolute', top: '15px', left: '15px', background: 'rgba(0,0,0,0.6)', padding: '4px 10px', borderRadius: '8px', fontSize: '9px', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <div style={{ width: '6px', height: '6px', background: 'var(--secondary)', borderRadius: '50%', animation: 'pulse-soft 0.8s infinite' }} />
-                              LIVE FEED
+                <div className="meet-grid">
+                  {babiesList.map((baby: any) => {
+                    const isSelected = baby.id === selectedBabyId;
+                    const isBabyCritical = baby.status === 'UNSAFE';
+                    const isBabyWarning = baby.status === 'WARNING' || baby.status === 'STILL';
+                    const isRiskAlert = isBabyCritical || isBabyWarning;
+                    
+                    return (
+                      <div 
+                        key={baby.id} 
+                        className={`meet-tile ${isSelected ? 'selected-card' : ''} ${isRiskAlert ? 'risk-alert' : ''}`}
+                        onClick={() => {
+                          setSelectedBabyId(baby.id);
+                          handleSelectBaby(baby.id);
+                        }}
+                      >
+                        {/* Cyan selection dot if card is both selected and in risk state */}
+                        {isSelected && isRiskAlert && <div className="selection-dot" />}
+
+                        {/* Vitals Overlay (top right) */}
+                        {baby.status !== 'OFFLINE' && (
+                          <div className="meet-vitals-overlay">
+                            <div className="meet-vital-item" title="Heart Rate">
+                              <Heart size={12} fill="var(--secondary)" color="var(--secondary)" className={baby.vitals?.heartRate > 0 ? "heartbeat-icon" : ""} style={{ animationDuration: `${60 / (baby.vitals?.heartRate || 140)}s` }} /> 
+                              {baby.vitals?.heartRate}
+                            </div>
+                            <div className="meet-vital-item" title="Breathing Rate">
+                              <Wind size={12} color="var(--primary)" /> 
+                              {baby.vitals?.respRate}
+                            </div>
+                            <div className="meet-vital-item" title="SpO2">
+                              <Zap size={12} color="var(--accent)" /> 
+                              {baby.vitals?.spo2}%
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Participant Tile Center (Camera feed or Initials Avatar) */}
+                        <div className="meet-avatar-container">
+                          {baby.isLiveSource && isCameraEnabled && isSelected && baby.simulationMode === 'off' ? (
+                            <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0, borderRadius: '22px', overflow: 'hidden' }}>
+                              <CameraPreview isAlert={isCritical} isEnabled={isCameraEnabled} />
+                              <div style={{ position: 'absolute', top: '15px', left: '15px', background: 'rgba(0,0,0,0.6)', padding: '4px 10px', borderRadius: '8px', fontSize: '9px', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={{ width: '6px', height: '6px', background: 'var(--secondary)', borderRadius: '50%', animation: 'pulse-soft 0.8s infinite' }} />
+                                LIVE FEED
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="meet-avatar" style={{
+                              background: baby.status === 'OFFLINE' ? '#475569' : 
+                                         isBabyCritical ? 'linear-gradient(135deg, var(--secondary), #be123c)' : 
+                                         isBabyWarning ? 'linear-gradient(135deg, var(--accent), #d97706)' : 
+                                         'linear-gradient(135deg, var(--primary), var(--lavender))'
+                            }}>
+                              {getInitials(baby.name)}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Bottom Info bar - Show Baby ID instead of Name */}
+                        <div className="meet-bottom-info">
+                          <div>
+                            <div className="meet-name">Baby ID: {baby.id}</div>
+                            <div style={{ fontSize: '9px', color: '#94A3B8', fontWeight: 700 }}>
+                              {baby.age} • {baby.weight}
+                            </div>
+                          </div>
+                          <span className={`meet-status-badge ${
+                            baby.status === 'SAFE' ? 'safe' : 
+                            baby.status === 'OFFLINE' ? 'offline' : 
+                            baby.status === 'UNSAFE' ? 'danger' : 'warning'
+                          }`}>
+                            {baby.status === 'UNSAFE' ? 'Apnea Crisis' : baby.status}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Right panel: Details Panel */}
+              <div className="right-details-panel">
+                {selectedBabyId === null ? (
+                  <div className="premium-card glass-panel" style={{ padding: '60px 40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', width: '100%' }}>
+                    <Activity size={48} color="var(--text-muted)" style={{ opacity: 0.5, marginBottom: '20px', animation: 'pulse-soft 2s infinite' }} />
+                    <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '0.5px' }}>SELECT AN INCUBATOR TO FOCUS</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '8px', maxWidth: '300px', lineHeight: '1.6' }}>
+                      Click on any incubator tile in the central grid to view live vitals telemetry, motion graphs, camera stream, and simulator overrides.
+                    </p>
+                  </div>
+                ) : (
+                  (() => {
+                    const selBaby = babiesList.find((b: any) => b.id === selectedBabyId) || {};
+                    const isSelCritical = selBaby.status === 'UNSAFE';
+                    const timestampStr = new Date().toLocaleTimeString();
+
+                    return (
+                      <div className="premium-card glass-panel" style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
+                        {/* Details Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--surface-border)', paddingBottom: '20px' }}>
+                          <div>
+                            <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--primary)', letterSpacing: '1px', textTransform: 'uppercase' }}>Selected Patient telemetry</span>
+                            <h3 style={{ fontSize: '22px', fontWeight: 900, marginTop: '4px' }}>Baby ID: {selBaby.id}</h3>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, marginTop: '2px' }}>
+                              {selBaby.age} • {selBaby.weight} • GA {selBaby.gestationalAge}
+                            </p>
+                          </div>
+                          <span className={`meet-status-badge ${
+                            selBaby.status === 'SAFE' ? 'safe' : 
+                            selBaby.status === 'OFFLINE' ? 'offline' : 
+                            selBaby.status === 'UNSAFE' ? 'danger' : 'warning'
+                          }`} style={{ fontSize: '12px', padding: '6px 14px', borderRadius: '12px' }}>
+                            {selBaby.status === 'UNSAFE' ? 'Apnea Crisis' : selBaby.status}
+                          </span>
+                        </div>
+
+                        {/* Telemetry Vitals Grid */}
+                        {selBaby.status !== 'OFFLINE' ? (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                            {/* HR Card */}
+                            <div style={{ background: 'rgba(255, 255, 255, 0.5)', padding: '16px', borderRadius: '20px', border: '1px solid var(--surface-border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255, 133, 161, 0.1)', color: 'var(--secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Heart size={20} className={selBaby.vitals?.heartRate > 0 ? "heartbeat-icon" : ""} style={{ animationDuration: `${60 / (selBaby.vitals?.heartRate || 142)}s` }} fill="currentColor" />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)' }}>HEART RATE</div>
+                                <div style={{ fontSize: '18px', fontWeight: 900, color: 'var(--secondary)' }}>
+                                  {selBaby.vitals?.heartRate} <span style={{ fontSize: '10px', fontWeight: 600 }}>bpm</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* SpO2 Card */}
+                            <div style={{ background: 'rgba(255, 255, 255, 0.5)', padding: '16px', borderRadius: '20px', border: '1px solid var(--surface-border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(77, 222, 186, 0.1)', color: 'var(--mint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Zap size={20} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)' }}>OXYGEN LEVEL</div>
+                                <div style={{ fontSize: '18px', fontWeight: 900, color: 'var(--mint)' }}>
+                                  {selBaby.vitals?.spo2}%
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Breathing Rate Card */}
+                            <div style={{ background: 'rgba(255, 255, 255, 0.5)', padding: '16px', borderRadius: '20px', border: '1px solid var(--surface-border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(93, 183, 255, 0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Wind size={20} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)' }}>BREATHING</div>
+                                <div style={{ fontSize: '18px', fontWeight: 900, color: 'var(--primary)' }}>
+                                  {selBaby.vitals?.respRate} <span style={{ fontSize: '10px', fontWeight: 600 }}>BPM</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Temp Card */}
+                            <div style={{ background: 'rgba(255, 255, 255, 0.5)', padding: '16px', borderRadius: '20px', border: '1px solid var(--surface-border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(167, 139, 250, 0.1)', color: 'var(--lavender)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Sliders size={20} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)' }}>TEMPERATURE</div>
+                                <div style={{ fontSize: '18px', fontWeight: 900, color: 'var(--lavender)' }}>
+                                  {selBaby.vitals?.temp} <span style={{ fontSize: '10px', fontWeight: 600 }}>°C</span>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         ) : (
-                          <div className="meet-avatar" style={{
-                            background: baby.status === 'OFFLINE' ? '#475569' : 
-                                       isBabyCritical ? 'linear-gradient(135deg, var(--secondary), #be123c)' : 
-                                       isBabyWarning ? 'linear-gradient(135deg, var(--accent), #d97706)' : 
-                                       'linear-gradient(135deg, var(--primary), var(--lavender))'
-                          }}>
-                            {getInitials(baby.name)}
+                          <div style={{ background: 'rgba(15, 23, 42, 0.05)', padding: '24px', borderRadius: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 700 }}>
+                            Patient is offline. Vitals telemetry disconnected.
                           </div>
                         )}
-                      </div>
 
-                      {/* Bottom Info bar */}
-                      <div className="meet-bottom-info">
-                        <div>
-                          <div className="meet-name">{baby.name}</div>
-                          <div style={{ fontSize: '9px', color: '#94A3B8', fontWeight: 700 }}>
-                            {baby.age} • {baby.weight}
+                        {/* Live Feed / Camera Core Preview */}
+                        <div style={{ height: '220px', borderRadius: '24px', overflow: 'hidden', position: 'relative', border: '1px solid var(--surface-border)', background: '#0F172A' }}>
+                          {selBaby.isLiveSource && isCameraEnabled && selBaby.simulationMode === 'off' ? (
+                            <CameraPreview isAlert={isSelCritical} isEnabled={isCameraEnabled} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                              <div className="meet-avatar" style={{ marginBottom: '15px', width: '70px', height: '70px', fontSize: '24px', background: isSelCritical ? 'var(--secondary)' : 'var(--primary)' }}>
+                                {getInitials(selBaby.name)}
+                              </div>
+                              <h4 style={{ fontSize: '16px', fontWeight: 800 }}>{selBaby.name}</h4>
+                              <p style={{ opacity: 0.5, fontSize: '11px', marginTop: '4px' }}>
+                                {selBaby.simulationMode !== 'off' 
+                                  ? `Simulation active: ${selBaby.simulationMode.toUpperCase()}`
+                                  : 'Vitals simulated electronically'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Trend Chart */}
+                        {selBaby.status !== 'OFFLINE' && (
+                          <div style={{ height: '140px', background: 'rgba(255, 255, 255, 0.3)', borderRadius: '24px', border: '1px solid var(--surface-border)', padding: '16px', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Telemetric wave trend</span>
+                              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)' }}>Updated: {timestampStr}</span>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <LiveWaveform data={history} line1="breathing" line2="motion" stroke1="var(--primary)" stroke2="var(--lavender)" gradientId="breathG_sel" />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Controls for this selected baby inside the details panel */}
+                        <div style={{ borderTop: '1px solid var(--surface-border)', paddingTop: '20px' }}>
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.5px' }}>
+                            Simulate State Overrides
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                            <button 
+                              className={`sim-btn normal ${selBaby.simulationMode === 'normal' ? 'active' : ''}`}
+                              onClick={() => handleSimulateState(selBaby.id, 'normal')}
+                              style={{ width: '100%' }}
+                            >
+                              <span>Safe</span>
+                              <Sliders size={12} />
+                            </button>
+
+                            <button 
+                              className={`sim-btn warning ${selBaby.simulationMode === 'crying' ? 'active' : ''}`}
+                              onClick={() => handleSimulateState(selBaby.id, 'crying')}
+                              style={{ width: '100%' }}
+                            >
+                              <span>Crying</span>
+                              <Mic size={12} />
+                            </button>
+
+                            <button 
+                              className={`sim-btn danger ${selBaby.simulationMode === 'apnea' ? 'active' : ''}`}
+                              onClick={() => handleSimulateState(selBaby.id, 'apnea')}
+                              style={{ width: '100%' }}
+                            >
+                              <span>Apnea</span>
+                              <AlertCircle size={12} />
+                            </button>
+
+                            <button 
+                              className={`sim-btn off ${selBaby.simulationMode === 'off' ? 'active' : ''}`}
+                              onClick={() => handleSimulateState(selBaby.id, 'off')}
+                              style={{ width: '100%' }}
+                            >
+                              <span>Vision Feed</span>
+                              <Camera size={12} />
+                            </button>
                           </div>
                         </div>
-                        <span className={`meet-status-badge ${
-                          baby.status === 'SAFE' ? 'safe' : 
-                          baby.status === 'OFFLINE' ? 'offline' : 
-                          baby.status === 'UNSAFE' ? 'danger' : 'warning'
-                        }`}>
-                          {baby.status === 'UNSAFE' ? 'Apnea Crisis' : baby.status}
-                        </span>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })()
+                )}
               </div>
-            </>
+            </div>
           )}
 
           {/* VIEW: DETAILED MONITOR */}
